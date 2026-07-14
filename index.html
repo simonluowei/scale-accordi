@@ -113,7 +113,9 @@ footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:v
   <aside>
     <div class="card">
       <h2>五度圈</h2>
-      <svg id="dial" viewBox="0 0 260 260" style="width:100%;height:auto"></svg>
+      <svg id="dial" viewBox="0 0 274 274" style="width:100%;height:auto"></svg>
+      <div id="enhKey"></div>
+      <p class="hint" style="margin-top:8px">15 个调号：7♯ → 0 → 7♭。B/C♭、F♯/G♭、D♭/C♯ 三处为等音异名，两种拼法都已列出。</p>
       <h3>调式</h3>
       <div class="row" id="modeRow">
         <button class="pill" data-mode="major" aria-pressed="true">大调</button>
@@ -171,16 +173,29 @@ const nm=(li,al)=>LET[li]+(al>0?'\u266F'.repeat(al):al<0?'\u266D'.repeat(-al):''
 const norm=a=>{while(a>6)a-=12;while(a<-6)a+=12;return a;};
 
 const CIRCLE=[
- {maj:[0,0],min:[5,0],M:'C',m:'a'},   {maj:[4,0],min:[2,0],M:'G',m:'e'},
- {maj:[1,0],min:[6,0],M:'D',m:'b'},   {maj:[5,0],min:[3,1],M:'A',m:'f\u266F'},
- {maj:[2,0],min:[0,1],M:'E',m:'c\u266F'}, {maj:[6,0],min:[4,1],M:'B',m:'g\u266F'},
- {maj:[3,1],min:[2,-1],M:'F\u266F',m:'e\u266D'}, {maj:[1,-1],min:[6,-1],M:'D\u266D',m:'b\u266D'},
- {maj:[5,-1],min:[3,0],M:'A\u266D',m:'f'}, {maj:[2,-1],min:[0,0],M:'E\u266D',m:'c'},
- {maj:[6,-1],min:[4,0],M:'B\u266D',m:'g'}, {maj:[3,0],min:[1,0],M:'F',m:'d'}
+ {maj:[0,0],min:[5,0],M:'C',m:'a',ks:'0'},
+ {maj:[4,0],min:[2,0],M:'G',m:'e',ks:'1\u266F'},
+ {maj:[1,0],min:[6,0],M:'D',m:'b',ks:'2\u266F'},
+ {maj:[5,0],min:[3,1],M:'A',m:'f\u266F',ks:'3\u266F'},
+ {maj:[2,0],min:[0,1],M:'E',m:'c\u266F',ks:'4\u266F'},
+ {maj:[6,0],min:[4,1],M:'B',m:'g\u266F',ks:'5\u266F',
+   alt:{maj:[0,-1],min:[5,-1],M:'C\u266D',m:'a\u266D',ks:'7\u266D'}},
+ {maj:[3,1],min:[1,1],M:'F\u266F',m:'d\u266F',ks:'6\u266F',
+   alt:{maj:[4,-1],min:[2,-1],M:'G\u266D',m:'e\u266D',ks:'6\u266D'}},
+ {maj:[1,-1],min:[6,-1],M:'D\u266D',m:'b\u266D',ks:'5\u266D',
+   alt:{maj:[0,1],min:[5,1],M:'C\u266F',m:'a\u266F',ks:'7\u266F'}},
+ {maj:[5,-1],min:[3,0],M:'A\u266D',m:'f',ks:'4\u266D'},
+ {maj:[2,-1],min:[0,0],M:'E\u266D',m:'c',ks:'3\u266D'},
+ {maj:[6,-1],min:[4,0],M:'B\u266D',m:'g',ks:'2\u266D'},
+ {maj:[3,0],min:[1,0],M:'F',m:'d',ks:'1\u266D'}
 ];
-const tonicOf=()=>S.mode==='major'?CIRCLE[S.pos].maj:CIRCLE[S.pos].min;
+/* 等音异名位置：5 (B/C♭) · 6 (F♯/G♭) · 7 (D♭/C♯) */
+const spell=()=>{const c=CIRCLE[S.pos];return (S.alt[S.pos]&&c.alt)?c.alt:c;};
+const REP_MAJ=['C','G','D','A','E','B','F\u266F','D\u266D','A\u266D','E\u266D','B\u266D','F'];
+const REP_MIN=['A_m','E_m','B_m','F\u266F_m','C\u266F_m','G\u266F_m','E\u266D_m','B\u266D_m','F_m','C_m','G_m','D_m'];
+const tonicOf=()=>S.mode==='major'?spell().maj:spell().min;
 const isMin=()=>S.mode!=='major';
-const keyName=()=>S.mode==='major'?CIRCLE[S.pos].M:CIRCLE[S.pos].m.toUpperCase();
+const keyName=()=>S.mode==='major'?spell().M:spell().m.toUpperCase();
 
 function scale7(t,form,oct){
   const [tli,tal]=t, tpc=((NPC[tli]+tal)%12+12)%12, tmidi=12*(oct+1)+NPC[tli]+tal, iv=FORM[form], o=[];
@@ -458,7 +473,7 @@ function playSeq(seq,refs,kbmap,hand){
 }
 
 /* ================= 内容构造 ================= */
-const S={pos:0,mode:'major',tab:'p1',bpm:66,small:true,enh:true,metro:false,loop:false,
+const S={pos:0,mode:'major',alt:{},tab:'p1',bpm:66,small:true,enh:true,metro:false,loop:false,
   motion:'parallel',oct:1,hand:'both',aoct:1,ahand:'both',chord:0,cad:0,giro:0};
 let SEQ=null,REFS=null,KBMAP=null;
 
@@ -490,7 +505,7 @@ function buildScaleSeq(){
 }
 /* --- 琶音 --- */
 function arpPat(){
-  const c=CIRCLE[S.pos],minor=isMin(),key=minor?c.m.toUpperCase():c.M;
+  const c=spell(),minor=isMin(),key=minor?c.m.toUpperCase():c.M;
   let rh={s:1,c:1,x:2,y:3,e:5},lh={s:5,c:1,x:S.small?3:4,y:2,e:1};
   const B='\u266D',Sh='\u266F';
   if(!minor){
@@ -695,33 +710,58 @@ const REP={
  'G_m':[['cl','肖邦 叙事曲 No.1 Op.23','g 小调 · 原调',''],['cl','拉赫玛尼诺夫 前奏曲 Op.23 No.5','g 小调 · 原调','进行曲节奏与和弦跳跃'],['pop','莫文蔚《广岛之恋》','建议走向：i–VII–VI–V','']],
  'D_m':[['cl','莫扎特 幻想曲 K.397','d 小调 · 原调','减七和弦的即兴式连接'],['cl','贝多芬《暴风雨》Op.31 No.2','d 小调 · 原调',''],['pop','王菲《人间》','建议走向：i–VI–III–VII','']]
 };
-const repKey=()=>{const c=CIRCLE[S.pos];return isMin()?(c.m.toUpperCase()+'_m'):c.M;};
+const repKey=()=>isMin()?REP_MIN[S.pos]:REP_MAJ[S.pos];
 
 /* ================= UI ================= */
 function dial(){
   const svg=document.getElementById('dial');svg.innerHTML='';
-  const cx=130,cy=130,r1=124,r2=84,r3=62,g=E('g');svg.appendChild(g);
+  const cx=137,cy=137,r1=131,r2=88,r3=64,g=E('g');svg.appendChild(g);
   CIRCLE.forEach((p,i)=>{
     const a0=(i*30-105)*Math.PI/180,a1=((i+1)*30-105)*Math.PI/180;
     const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
     const [x1,y1]=P(r1,a0),[x2,y2]=P(r1,a1),[x3,y3]=P(r2,a1),[x4,y4]=P(r2,a0);
-    const t=S.mode==='major'?p.maj:p.min;
+    const useAlt=!!(S.alt[i]&&p.alt), act=useAlt?p.alt:p;
+    const t=S.mode==='major'?act.maj:act.min;
     const black=!WHITE.has((((NPC[t[0]]+t[1])%12)+12)%12);
+    const sel=i===S.pos;
     const path=E('path',{d:`M${x1},${y1} A${r1},${r1} 0 0 1 ${x2},${y2} L${x3},${y3} A${r2},${r2} 0 0 0 ${x4},${y4} Z`,
-      stroke:'#D8D2C6','stroke-width':1.2,class:'seg '+(black?'black':'white')+(i===S.pos?' sel':'')});
+      stroke:'#D8D2C6','stroke-width':1.2,class:'seg '+(black?'black':'white')+(sel?' sel':'')});
     path.addEventListener('click',()=>{S.pos=i;refresh();});
     g.appendChild(path);
     const am=(a0+a1)/2,[lx,ly]=P((r1+r2)/2,am);
-    const tx=E('text',{x:lx,y:ly+5,'text-anchor':'middle',class:'seglab',
-      fill:i===S.pos?'#0E3A36':(black?'#FDFBF7':'#3A4250')});
-    tx.textContent=S.mode==='major'?p.M:p.m;g.appendChild(tx);
+    const main=S.mode==='major'?p.M:p.m, altN=p.alt?(S.mode==='major'?p.alt.M:p.alt.m):null;
+    const fillFor=on=>sel?(on?'#0E3A36':'#4E6B67'):(black?(on?'#FDFBF7':'#98A2AF'):(on?'#2C3440':'#9AA2AC'));
+    if(!altN){
+      const tx=E('text',{x:lx,y:ly+2,'text-anchor':'middle',class:'seglab',fill:fillFor(true)});
+      tx.textContent=main;g.appendChild(tx);
+      const ks=E('text',{x:lx,y:ly+15,'text-anchor':'middle','font-family':'IBM Plex Mono','font-size':9,fill:fillFor(false)});
+      ks.textContent=p.ks;g.appendChild(ks);
+    }else{
+      const t1=E('text',{x:lx,y:ly-6,'text-anchor':'middle',class:'seglab','font-size':14,fill:fillFor(!useAlt)});
+      t1.textContent=main+' '+p.ks;g.appendChild(t1);
+      const sep=E('line',{x1:lx-16,x2:lx+16,y1:ly-1,y2:ly-1,stroke:sel?'#0E3A36':'#C4BFB2','stroke-width':.7,opacity:.5});
+      g.appendChild(sep);
+      const t2=E('text',{x:lx,y:ly+13,'text-anchor':'middle',class:'seglab','font-size':14,fill:fillFor(useAlt)});
+      t2.textContent=p.alt.M&&S.mode==='major'?p.alt.M+' '+p.alt.ks:p.alt.m+' '+p.alt.ks;g.appendChild(t2);
+    }
   });
   g.appendChild(E('circle',{cx,cy,r:r3,fill:'#FBF9F5',stroke:'#E2DDD2'}));
-  const t1=E('text',{x:cx,y:cy-2,'text-anchor':'middle','font-family':'Cormorant Garamond','font-size':28,fill:'#2C3440'});
+  const sp=spell();
+  const t1=E('text',{x:cx,y:cy-2,'text-anchor':'middle','font-family':'Cormorant Garamond','font-size':30,fill:'#2C3440'});
   t1.textContent=keyName();
-  const t2=E('text',{x:cx,y:cy+20,'text-anchor':'middle','font-family':'IBM Plex Mono','font-size':10,fill:'#7C8695'});
-  t2.textContent=S.mode==='major'?'MAJOR':(S.mode==='melodic'?'MELODIC MIN.':'HARMONIC MIN.');
+  const t2=E('text',{x:cx,y:cy+18,'text-anchor':'middle','font-family':'IBM Plex Mono','font-size':10,fill:'#7C8695'});
+  const ks=keySig(tonicOf(),isMin());
+  t2.textContent=(ks.sharps?ks.sharps+' \u266F':(ks.flats?ks.flats+' \u266D':'0'))+' · '+(S.mode==='major'?'MAJ':(S.mode==='melodic'?'MEL':'HARM'));
   g.appendChild(t1);g.appendChild(t2);
+  // 等音异名切换
+  const box=document.getElementById('enhKey');
+  const cur=CIRCLE[S.pos];
+  if(cur.alt){
+    const a=S.alt[S.pos]?cur:cur.alt;         // 另一种拼法
+    const an=S.mode==='major'?a.M:a.m.toUpperCase();
+    box.innerHTML=`<button class="pill" id="altBtn" style="width:100%;margin-top:10px">⇄ 换成 ${an}（${a.ks}）</button>`;
+    document.getElementById('altBtn').addEventListener('click',()=>{S.alt[S.pos]=!S.alt[S.pos];refresh();});
+  } else box.innerHTML='';
 }
 function sideFor(tab){
   const P=document.getElementById('sidePanel');
